@@ -1,0 +1,6 @@
+[submodule "ReflectiveDLLInjection"]
+	path = ReflectiveDLLInjection
+	url = https://github.com/metaworm/ReflectiveDLLInjection
+[submodule "Process-Dump"]
+	path = Process-Dump
+	url = https://github.com/metaworm/Process-Dump

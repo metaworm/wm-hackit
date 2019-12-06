@@ -1,0 +1,24 @@
+[package]
+name = "wm-hackit"
+version = "0.1.0"
+authors = ["metaworm@outlook.com"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+rdi_inject = []
+rdi_dll_lib = []
+process_dump = ['winapi/shellapi']
+
+[dependencies]
+zydis = '3.0.0'
+dynasm = '0.5.2'
+dynasmrt = '0.5.2'
+encoding = '^0.2.3'
+winapi = {version = '0.3.8', features = [
+    "winuser", "winbase", "tlhelp32", "handleapi", "winnt",
+    "processthreadsapi", "psapi", "errhandlingapi",
+    "memoryapi", "dbghelp", "debugapi", "ioapiset", "winerror",
+    "shellscalingapi", "sysinfoapi", "heapapi", "fileapi",
+]}
