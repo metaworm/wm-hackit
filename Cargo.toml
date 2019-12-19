@@ -7,6 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+default = ['process_dump']
 rdi_inject = []
 rdi_dll_lib = []
 process_dump = ['winapi/shellapi']
@@ -17,8 +18,8 @@ dynasm = '0.5.2'
 dynasmrt = '0.5.2'
 encoding = '^0.2.3'
 winapi = {version = '0.3.8', features = [
-    "winuser", "winbase", "tlhelp32", "handleapi", "winnt",
-    "processthreadsapi", "psapi", "errhandlingapi",
-    "memoryapi", "dbghelp", "debugapi", "ioapiset", "winerror",
-    "shellscalingapi", "sysinfoapi", "heapapi", "fileapi",
+    'winuser', 'winbase', 'tlhelp32', 'handleapi', 'winnt',
+    'processthreadsapi', 'psapi', 'errhandlingapi',
+    'memoryapi', 'dbghelp', 'debugapi', 'ioapiset', 'winerror',
+    'shellscalingapi', 'sysinfoapi', 'heapapi', 'fileapi', 'wow64apiset',
 ]}

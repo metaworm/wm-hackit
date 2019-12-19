@@ -19,7 +19,7 @@ pub fn by_remotethread(p: &Process, dll_path: &str) -> Result<u32, Error> {
     let load_library = p.get_address_by_symbol("kernel32!LoadLibraryW")?;
     unsafe {
         let mut tid = 0u32;
-        let h = CreateRemoteThreadEx(p.handle, ptr::null_mut(), 0usize, transmute(load_library), buf as LPVOID, 0u32, ptr::null_mut(), &mut tid);
+        let h = CreateRemoteThreadEx(p.handle.0, ptr::null_mut(), 0usize, transmute(load_library), buf as LPVOID, 0u32, ptr::null_mut(), &mut tid);
         if h.is_null() { Error::last_result() } else { CloseHandle(h); Ok(tid) }
     }
 }

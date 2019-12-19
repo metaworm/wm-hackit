@@ -138,3 +138,12 @@ pub const IncludeVmRegionCallback: u32 = 10;
 //     VmPreReadCallback,
 //     VmPostReadCallback
 // } MINIDUMP_CALLBACK_TYPE;
+
+pub type NTSTATUS = LONG;
+
+extern "system" {
+    // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationprocess
+    pub fn NtQueryInformationProcess(handle: HANDLE, class: usize, info: PVOID, len: usize, out_len: PULONG) -> NTSTATUS;
+    // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationthread
+    pub fn NtQueryInformationThread(handle: HANDLE, class: usize, info: PVOID, len: usize, out_len: PULONG) -> NTSTATUS;
+}

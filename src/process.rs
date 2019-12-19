@@ -1,9 +1,6 @@
 
 use crate::*;
 
-// use encoding::all::GBK;
-// use encoding::{Encoding, DecoderTrap};
-
 use core::cell::Cell;
 use core::ffi::c_void;
 use core::slice;
@@ -43,7 +40,7 @@ pub fn write_process_memory(handle: HANDLE, address: usize, data: &[u8]) -> usiz
 
 pub struct Process {
     pub pid: u32,
-    pub handle: HANDLE,
+    pub handle: Handle,
     init_sym: Cell<bool>,
 }
 
@@ -87,15 +84,22 @@ impl Iterator for MemoryIter<'_> {
 }
 
 impl Process {
-    pub fn open(pid: u32) -> Result<Process, Error> {
+    pub fn open(pid: u32, access: Option<u32>) -> Result<Process, Error> {
         unsafe {
-            let handle = OpenProcess(PROCESS_ALL_ACCESS, 0, pid);
-            if handle == INVALID_HANDLE_VALUE {
+            let handle = OpenProcess(access.unwrap_or(PROCESS_ALL_ACCESS), 0, pid);
+            if handle.is_null() {
                 Error::last_result()
             } else {
                 Process::from_handle(handle)
             }
         }
+    }
+
+    pub fn is_wow64(&self) -> bool {
+        use winapi::um::wow64apiset::IsWow64Process;
+        let mut result: BOOL = 0;
+        unsafe { IsWow64Process(*self.handle, &mut result); };
+        return result != 0;
     }
 
     pub fn from_handle(handle: HANDLE) -> Result<Process, Error> {
@@ -105,7 +109,7 @@ impl Process {
 
             let init_sym = Cell::new(false);
             return Ok(Process {
-                pid, handle, init_sym,
+                pid, handle: handle.into(), init_sym,
             });
         }
     }
@@ -119,7 +123,7 @@ impl Process {
 
         if self.init_sym.get() { return Ok(()); }
         unsafe {
-            if SymInitializeW(self.handle, ptr::null_mut(), TRUE) > 0 {
+            if SymInitializeW(*self.handle, ptr::null_mut(), TRUE) > 0 {
                 SymSetOptions(SymGetOptions() | SYMOPT_UNDNAME | SYMOPT_CASE_INSENSITIVE);
                 self.init_sym.set(true); Ok(())
             } else { Error::last_result() }
@@ -128,7 +132,7 @@ impl Process {
 
     pub fn clean_symbol(&self) {
         unsafe {
-            SymCleanup(self.handle);
+            SymCleanup(*self.handle);
             self.init_sym.set(false);
         }
     }
@@ -136,7 +140,7 @@ impl Process {
     pub fn get_module_name(&self, module: u64) -> Result<String, Error> {
         unsafe {
             let mut name = [0 as u16; MAX_PATH];
-            if GetModuleBaseNameW(self.handle, module as HMODULE, name.as_mut_ptr(), MAX_PATH as u32) > 0 {
+            if GetModuleBaseNameW(*self.handle, module as HMODULE, name.as_mut_ptr(), MAX_PATH as u32) > 0 {
                 Ok(String::from_wide(&name))
             } else { Error::last_result() }
         }
@@ -145,7 +149,7 @@ impl Process {
     pub fn get_module_path(&self, module: u64) -> Result<String, Error> {
         unsafe {
             let mut path = [0 as u16; MAX_PATH];
-            if GetModuleFileNameExW(self.handle, module as HMODULE, path.as_mut_ptr(), MAX_PATH as u32) > 0 {
+            if GetModuleFileNameExW(*self.handle, module as HMODULE, path.as_mut_ptr(), MAX_PATH as u32) > 0 {
                 Ok(String::from_wide(&path))
             } else { Error::last_result() }
         }
@@ -159,11 +163,11 @@ impl Process {
     #[inline]
     pub fn enum_module(&self) -> ToolHelperIter<MODULEENTRY32W> { enum_module(self.pid) }
 
-    pub fn image_file_name(&self) -> Result<String, Error> {
+    pub fn image_path(&self) -> Result<String, Error> {
         unsafe {
             let mut path = [0 as u16; MAX_PATH];
             let mut size = path.len() as u32;
-            if QueryFullProcessImageNameW(self.handle, 0, path.as_mut_ptr(), &mut size) > 0 {
+            if QueryFullProcessImageNameW(*self.handle, 0, path.as_mut_ptr(), &mut size) > 0 {
                 Ok(String::from_wide(&path))
             } else { Error::last_result() }
         }
@@ -172,24 +176,24 @@ impl Process {
     pub fn protect_memory(&self, address: usize, size: usize, attr: u32) -> Option<u32> {
         unsafe {
             let mut oldattr = 0u32;
-            let r = VirtualProtectEx(self.handle, address as LPVOID, size, attr, &mut oldattr);
+            let r = VirtualProtectEx(*self.handle, address as LPVOID, size, attr, &mut oldattr);
             if r > 0 { Some(oldattr) } else { None }
         }
     }
 
     pub fn read_memory<'a>(&self, address: usize, data: &'a mut [u8]) -> &'a mut [u8] {
-        let r = read_process_memory(self.handle, address, data);
+        let r = read_process_memory(*self.handle, address, data);
         &mut data[..r]
     }
 
     pub fn write_memory(&self, address: usize, data: &[u8]) -> usize {
-        write_process_memory(self.handle, address, data)
+        write_process_memory(*self.handle, address, data)
     }
 
     pub fn write_code(&self, address: usize, data: &[u8]) -> usize {
-        let r = write_process_memory(self.handle, address, data);
+        let r = write_process_memory(*self.handle, address, data);
         unsafe {
-            FlushInstructionCache(self.handle, address as LPCVOID, data.len());
+            FlushInstructionCache(*self.handle, address as LPCVOID, data.len());
         }
         return r;
     }
@@ -267,26 +271,34 @@ impl Process {
         }
     }
 
+    pub fn read_nt_header(&self, mod_base: usize) -> Option<IMAGE_NT_HEADERS> {
+        let dos: IMAGE_DOS_HEADER = self.read(mod_base).ok()?;
+        if dos.e_magic != IMAGE_DOS_SIGNATURE { return None; }
+        let nt: IMAGE_NT_HEADERS = self.read(mod_base + dos.e_lfanew as usize).ok()?;
+        if nt.Signature != IMAGE_NT_SIGNATURE { return None; }
+        Some(nt)
+    }
+
     pub fn enum_memory(&self, address: usize) -> MemoryIter {
         MemoryIter {process: self, address: address}
     }
 
     pub fn virtual_alloc(&self, address: usize, size: usize, mem_type: u32, protect: u32) -> usize {
         unsafe {
-            VirtualAllocEx(self.handle, address as LPVOID, size, mem_type, protect) as usize
+            VirtualAllocEx(*self.handle, address as LPVOID, size, mem_type, protect) as usize
         }
     }
 
     pub fn virtual_free(&self, address: usize) -> bool {
         unsafe {
-            VirtualFreeEx(self.handle, address as LPVOID, 0, MEM_RELEASE) > 0
+            VirtualFreeEx(*self.handle, address as LPVOID, 0, MEM_RELEASE) > 0
         }
     }
 
     pub fn virtual_query(&self, address: usize) -> Result<MemoryInfo, Error> {
         unsafe {
             let mut mbi: MEMORY_BASIC_INFORMATION = zeroed();
-            match VirtualQueryEx(self.handle, address as LPVOID, &mut mbi, size_of_val(&mbi)) {
+            match VirtualQueryEx(*self.handle, address as LPVOID, &mut mbi, size_of_val(&mbi)) {
                 0 => Error::last_result(),
                 _ => Ok(MemoryInfo::from_mbi(&mbi)),
             }
@@ -301,7 +313,7 @@ impl Process {
             (*si).SizeOfStruct = buf.len() as u32;
             (*si).MaxNameLen = MAX_SYM_NAME as u32;
 
-            if SymFromNameW(self.handle, symbol.to_wide().as_ptr(), si) > 0 {
+            if SymFromNameW(*self.handle, symbol.to_wide().as_ptr(), si) > 0 {
                 Ok((*si).Address as usize)
             } else {
                 let symbol = symbol.to_lowercase();
@@ -331,10 +343,10 @@ impl Process {
             let mut dis = 0 as u64;
             let mut im: IMAGEHLP_MODULE64 = zeroed();
             im.SizeOfStruct = size_of_val(&im) as u32;
-            SymGetModuleInfoW64(self.handle, address as u64, &mut im);
+            SymGetModuleInfoW64(*self.handle, address as u64, &mut im);
             let module_name = String::from_wide(&im.ModuleName);
 
-            if SymFromAddrW(self.handle, address as u64, &mut dis, si) > 0 {
+            if SymFromAddrW(*self.handle, address as u64, &mut dis, si) > 0 {
                 let s = slice::from_raw_parts((*si).Name.as_ptr(), (*si).NameLen as usize);
                 Some(SymbolInfo {
                     module: module_name,
@@ -356,7 +368,7 @@ impl Process {
     pub fn get_mapped_file_name(&self, address: usize) -> Option<String> {
         unsafe {
             let mut buf = [0u16; 300];
-            let len = GetMappedFileNameW(self.handle, address as LPVOID, buf.as_mut_ptr(), buf.len() as u32);
+            let len = GetMappedFileNameW(*self.handle, address as LPVOID, buf.as_mut_ptr(), buf.len() as u32);
             if len > 0 { Some(String::from_wide(&buf[..len as usize])) } else { None }
         }
     }
@@ -383,7 +395,7 @@ impl Process {
             ));
             if !file.success() { return Err(Error::CreateFile); }
 
-            if MiniDumpWriteDump(self.handle, self.pid, file.0, match dump_type {
+            if MiniDumpWriteDump(*self.handle, self.pid, file.0, match dump_type {
                 DumpType::Mini => MiniDumpNormal,
                 DumpType::Full => MiniDumpWithFullMemory | MiniDumpWithHandleData | MiniDumpWithUnloadedModules |
                                   MiniDumpWithUnloadedModules | MiniDumpWithProcessThreadData |

@@ -4,6 +4,7 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
+#![allow(unused_must_use)]
 
 use core::ops::Deref;
 use core::{ptr, mem};
@@ -18,7 +19,6 @@ use winapi::um::winbase::*;
 use winapi::um::errhandlingapi::*;
 use winapi::um::memoryapi::*;
 use winapi::um::winuser::*;
-// use winapi::um::libloaderapi::*;
 use winapi::um::heapapi::*;
 use winapi::um::handleapi::*;
 use winapi::um::debugapi::OutputDebugStringW;
@@ -26,6 +26,8 @@ use winapi::um::debugapi::OutputDebugStringW;
 pub mod disasm;
 pub mod inject;
 pub mod hook;
+pub mod ntdll;
+pub mod third_util;
 
 mod ffi;
 mod string;
@@ -159,4 +161,20 @@ pub fn heap_alloc(size: usize) -> usize {
 #[inline]
 pub fn heap_free(ptr: usize) {
     unsafe { HeapFree(GetProcessHeap(), 0, mem::transmute(ptr)); }
+}
+
+#[cfg(debug_assertions)]
+#[macro_export]
+macro_rules! dlog {
+    () => ($crate::output_debug_string("\n"));
+    ($($arg:tt)*) => ({
+        $crate::output_debug_string(format!($($arg)*));
+    })
+}
+
+#[cfg(not(debug_assertions))]
+#[macro_export]
+macro_rules! dlog {
+    () => (());
+    ($($arg:tt)*) => (());
 }

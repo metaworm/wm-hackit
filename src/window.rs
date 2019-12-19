@@ -9,7 +9,7 @@ use winapi::um::winuser::*;
 use crate::string::*;
 
 /// Wrapper of EnumWindows
-pub fn enum_window<F: FnMut(HWND) -> bool>(mut callback: F) {
+pub fn enum_window(mut callback: impl FnMut(HWND) -> bool) {
     extern "system" fn wrapper(hwnd: HWND, param: LPARAM) -> BOOL {
         unsafe {
             let callback: *mut &'static mut dyn FnMut(HWND) -> bool = transmute(param);
@@ -23,7 +23,7 @@ pub fn enum_window<F: FnMut(HWND) -> bool>(mut callback: F) {
 }
 
 /// Wrapper of GetTopWindow, GetWindow
-pub fn enum_top_window<F: FnMut(HWND) -> bool>(mut callback: F) {
+pub fn enum_top_window(mut callback: impl FnMut(HWND) -> bool) {
     unsafe {
         let mut hwnd = GetTopWindow(null_mut());
         let mut cont = true;
@@ -108,11 +108,7 @@ impl WindowInfo for HWND {
     }
 }
 
-pub fn get_top_window(pid: u32) -> HWND {
-    let mut result: HWND = null_mut();
-    enum_top_window(|hwnd| {
-        if pid == hwnd.get_tid_pid().1 {
-            result = hwnd; false
-        } else { true }
-    }); result
+#[inline]
+pub fn enum_process_window(pid: u32, mut callback: impl FnMut(HWND) -> bool) {
+    enum_window(|hwnd| if hwnd.get_tid_pid().1 == pid { callback(hwnd) } else { true })
 }
