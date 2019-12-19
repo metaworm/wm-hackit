@@ -21,7 +21,9 @@ pub trait FromWide {
 
 impl FromWide for String {
     fn from_wide(wstr: &[u16]) -> Self {
-        OsString::from_wide(&wstr[0..wstr.strlen()]).into_string().unwrap()
+        match OsString::from_wide(&wstr[0..wstr.strlen()]).into_string() {
+            Ok(r) => r, Err(_) => String::new(),
+        }
     }
 }
 
