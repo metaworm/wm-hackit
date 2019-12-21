@@ -1,13 +1,11 @@
 
 use crate::*;
 
-use core::cell::Cell;
 use core::ffi::c_void;
 use core::slice;
 use core::mem::{zeroed, transmute, size_of, size_of_val};
 
 use winapi::um::psapi::*;
-use winapi::um::dbghelp::*;
 use winapi::um::fileapi::*;
 
 pub const SIZE_OF_CALL: usize = 5;
@@ -41,7 +39,6 @@ pub fn write_process_memory(handle: HANDLE, address: usize, data: &[u8]) -> usiz
 pub struct Process {
     pub pid: u32,
     pub handle: Handle,
-    init_sym: Cell<bool>,
 }
 
 pub enum DumpType {
@@ -107,34 +104,12 @@ impl Process {
             let pid = GetProcessId(handle);
             if pid == 0 { return Error::last_result(); }
 
-            let init_sym = Cell::new(false);
-            return Ok(Process {
-                pid, handle: handle.into(), init_sym,
-            });
+            return Ok(Process { pid, handle: handle.into() });
         }
     }
 
     pub(crate) fn current() -> Process {
         unsafe { Self::from_handle(GetCurrentProcess()).unwrap() }
-    }
-
-    pub fn init_symbol(&self) -> Result<(), Error> {
-        use crate::ffi::*;
-
-        if self.init_sym.get() { return Ok(()); }
-        unsafe {
-            if SymInitializeW(*self.handle, ptr::null_mut(), TRUE) > 0 {
-                SymSetOptions(SymGetOptions() | SYMOPT_UNDNAME | SYMOPT_CASE_INSENSITIVE);
-                self.init_sym.set(true); Ok(())
-            } else { Error::last_result() }
-        }
-    }
-
-    pub fn clean_symbol(&self) {
-        unsafe {
-            SymCleanup(*self.handle);
-            self.init_sym.set(false);
-        }
     }
 
     pub fn get_module_name(&self, module: u64) -> Result<String, Error> {
@@ -302,66 +277,6 @@ impl Process {
                 0 => Error::last_result(),
                 _ => Ok(MemoryInfo::from_mbi(&mbi)),
             }
-        }
-    }
-
-    pub fn get_address_by_symbol(&self, symbol: &str) -> Result<usize, Error> {
-        self.init_symbol()?;
-        unsafe {
-            let mut buf = [0u8; size_of::<SYMBOL_INFOW>() + MAX_SYM_NAME * 2];
-            let mut si: *mut SYMBOL_INFOW = transmute(buf.as_mut_ptr());
-            (*si).SizeOfStruct = buf.len() as u32;
-            (*si).MaxNameLen = MAX_SYM_NAME as u32;
-
-            if SymFromNameW(*self.handle, symbol.to_wide().as_ptr(), si) > 0 {
-                Ok((*si).Address as usize)
-            } else {
-                let symbol = symbol.to_lowercase();
-                for m in self.enum_module() {
-                    let name = m.name().to_lowercase();
-                    if name == symbol { return Ok(m.base()); }
-
-                    let can_trim = name.ends_with(".dll") || name.ends_with(".exe");
-                    if can_trim && name.len() > 4 && &name[..name.len() - 4] == symbol {
-                        return Ok(m.base());
-                    }
-                }
-                Error::last_result()
-            }
-        }
-    }
-
-    pub fn get_symbol_by_address(&self, address: usize) -> Option<SymbolInfo> {
-        use crate::ffi::{SymGetModuleInfoW64, IMAGEHLP_MODULE64};
-
-        unsafe {
-            let mut buf = [0u8; size_of::<SYMBOL_INFOW>() + MAX_SYM_NAME * 2];
-            let mut si: *mut SYMBOL_INFOW = transmute(buf.as_mut_ptr());
-            (*si).SizeOfStruct = size_of::<SYMBOL_INFOW>() as u32;
-            (*si).MaxNameLen = MAX_SYM_NAME as u32;
-
-            let mut dis = 0 as u64;
-            let mut im: IMAGEHLP_MODULE64 = zeroed();
-            im.SizeOfStruct = size_of_val(&im) as u32;
-            SymGetModuleInfoW64(*self.handle, address as u64, &mut im);
-            let module_name = String::from_wide(&im.ModuleName);
-
-            if SymFromAddrW(*self.handle, address as u64, &mut dis, si) > 0 {
-                let s = slice::from_raw_parts((*si).Name.as_ptr(), (*si).NameLen as usize);
-                Some(SymbolInfo {
-                    module: module_name,
-                    symbol: String::from_wide(s),
-                    offset: dis as usize,
-                    mod_base: im.BaseOfImage as usize,
-                })
-            } else if !module_name.is_empty() {
-                Some(SymbolInfo {
-                    module: module_name,
-                    symbol: String::new(),
-                    offset: 0,
-                    mod_base: im.BaseOfImage as usize,
-                })
-            } else { None }
         }
     }
 

@@ -16,6 +16,7 @@ pub fn by_remotethread(p: &Process, dll_path: &str) -> Result<u32, Error> {
         from_raw_parts::<u8>(transmute(dll_path.as_ptr()), dll_path.len() * 2)
     });
 
+    p.sym_init(None, true);
     let load_library = p.get_address_by_symbol("kernel32!LoadLibraryW")?;
     unsafe {
         let mut tid = 0u32;

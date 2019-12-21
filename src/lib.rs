@@ -27,6 +27,7 @@ pub mod disasm;
 pub mod inject;
 pub mod hook;
 pub mod ntdll;
+pub mod symbol;
 pub mod third_util;
 
 mod ffi;
@@ -39,6 +40,10 @@ pub use string::*;
 pub use window::*;
 pub use process::*;
 pub use toolhelper::*;
+pub use symbol::*;
+
+pub use ffi::SYMOPT_CASE_INSENSITIVE;
+pub use ffi::SYMOPT_UNDNAME;
 
 pub struct Handle(pub HANDLE);
 
