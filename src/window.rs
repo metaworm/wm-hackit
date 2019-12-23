@@ -22,18 +22,6 @@ pub fn enum_window(mut callback: impl FnMut(HWND) -> bool) {
     }
 }
 
-/// Wrapper of GetTopWindow, GetWindow
-pub fn enum_top_window(mut callback: impl FnMut(HWND) -> bool) {
-    unsafe {
-        let mut hwnd = GetTopWindow(null_mut());
-        let mut cont = true;
-        while hwnd != null_mut() && cont {
-            cont = callback(hwnd);
-            hwnd = GetWindow(hwnd, GW_HWNDNEXT);
-        }
-    }
-}
-
 pub trait WindowInfo {
     fn get_tid_pid(self) -> (u32, u32);
     fn is_visible(self) -> bool;
@@ -111,4 +99,20 @@ impl WindowInfo for HWND {
 #[inline]
 pub fn enum_process_window(pid: u32, mut callback: impl FnMut(HWND) -> bool) {
     enum_window(|hwnd| if hwnd.get_tid_pid().1 == pid { callback(hwnd) } else { true })
+}
+
+pub struct Hwnd(pub HWND);
+
+impl Iterator for Hwnd {
+    type Item = HWND;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let hwnd = unsafe { GetWindow(self.0, GW_HWNDNEXT) };
+        if hwnd.is_null() { None } else { Some(hwnd) }
+    }
+}
+
+/// Wrapper of GetTopWindow, GetWindow
+pub fn get_top_window() -> Hwnd {
+    unsafe { Hwnd(GetTopWindow(null_mut())) }
 }
