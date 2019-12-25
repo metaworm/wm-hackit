@@ -92,6 +92,7 @@ impl Process {
         }
     }
 
+    // https://docs.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-iswow64process
     pub fn is_wow64(&self) -> bool {
         use winapi::um::wow64apiset::IsWow64Process;
         let mut result: BOOL = 0;
@@ -286,6 +287,15 @@ impl Process {
             let mut buf = [0u16; 300];
             let len = GetMappedFileNameW(*self.handle, address as LPVOID, buf.as_mut_ptr(), buf.len() as u32);
             if len > 0 { Some(String::from_wide(&buf[..len as usize])) } else { None }
+        }
+    }
+
+    pub fn get_exit_code(&self) -> Option<u32> {
+        let mut code = 0u32;
+        unsafe {
+            if GetExitCodeProcess(*self.handle, &mut code) > 0 {
+                Some(code)
+            } else { None }
         }
     }
 
