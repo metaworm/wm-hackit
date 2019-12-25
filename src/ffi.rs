@@ -1,8 +1,11 @@
 
 use core::ffi::c_void;
 
-use winapi::shared::minwindef::*;
-use winapi::um::winnt::*;
+use winapi::shared::minwindef::{
+    DWORD, MAX_PATH, BOOL,
+};
+use winapi::shared::ntdef::{HANDLE, PULONG, PVOID, WCHAR};
+pub use winapi::shared::ntdef::NTSTATUS;
 
 #[repr(C)]
 pub struct IMAGEHLP_MODULE64 {
@@ -115,6 +118,21 @@ pub const MiniDumpWithAvxXStateContext          :usize = 0x00200000;
 pub const MiniDumpWithIptTrace                  :usize = 0x00400000;
 pub const MiniDumpValidTypeFlags                :usize = 0x007fffff;
 
+#[repr(C)]
+pub enum MEMORY_INFORMATION_CLASS {
+    MemoryBasicInformation = 0, // MEMORY_BASIC_INFORMATION
+    MemoryWorkingSetInformation, // MEMORY_WORKING_SET_INFORMATION
+    MemoryMappedFilenameInformation, // UNICODE_STRING
+    MemoryRegionInformation, // MEMORY_REGION_INFORMATION
+    MemoryWorkingSetExInformation, // MEMORY_WORKING_SET_EX_INFORMATION
+    MemorySharedCommitInformation, // MEMORY_SHARED_COMMIT_INFORMATION
+    MemoryImageInformation, // MEMORY_IMAGE_INFORMATION
+    MemoryRegionInformationEx,
+    MemoryPrivilegedBasicInformation,
+    MemoryEnclaveImageInformation, // MEMORY_ENCLAVE_IMAGE_INFORMATION // since REDSTONE3
+    MemoryBasicInformationCapped
+}
+
 // typedef enum _MINIDUMP_CALLBACK_TYPE {
 //     ModuleCallback,
 //     ThreadCallback,
@@ -139,11 +157,11 @@ pub const IncludeVmRegionCallback: u32 = 10;
 //     VmPostReadCallback
 // } MINIDUMP_CALLBACK_TYPE;
 
-pub type NTSTATUS = LONG;
-
 extern "system" {
     // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationprocess
     pub fn NtQueryInformationProcess(handle: HANDLE, class: usize, info: PVOID, len: usize, out_len: PULONG) -> NTSTATUS;
     // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationthread
     pub fn NtQueryInformationThread(handle: HANDLE, class: usize, info: PVOID, len: usize, out_len: PULONG) -> NTSTATUS;
+    // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntqueryvirtualmemory
+    pub fn NtQueryVirtualMemory(handle: HANDLE, base: usize, class: MEMORY_INFORMATION_CLASS, info: PVOID, len: usize, out_len: PULONG) -> NTSTATUS;
 }
