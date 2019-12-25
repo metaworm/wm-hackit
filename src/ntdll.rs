@@ -5,7 +5,6 @@ use crate::string::*;
 use core::mem::{transmute, size_of, zeroed, size_of_val};
 use winapi::um::winnt::HANDLE;
 use winapi::shared::ntdef::*;
-use winapi::shared::minwindef::MAX_PATH;
 
 pub enum ProcessInfoClass {
     BasicInformation = 0,

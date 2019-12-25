@@ -23,6 +23,7 @@ use winapi::um::heapapi::*;
 use winapi::um::handleapi::*;
 use winapi::um::debugapi::OutputDebugStringW;
 
+pub mod util;
 pub mod disasm;
 pub mod inject;
 pub mod hook;
