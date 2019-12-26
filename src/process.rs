@@ -212,14 +212,14 @@ impl Process {
         result
     }
 
-    pub fn read_cstr(&self, address: usize) -> Result<String, Error> {
+    pub fn read_cstr(&self, address: usize, size: usize) -> Result<String, Error> {
         unsafe {
-            Ok(String::from_utf8_unchecked(self.read_util(address, 0u8, 1000)))
+            Ok(String::from_utf8_unchecked(self.read_util(address, 0u8, size)))
         }
     }
 
-    pub fn read_wstr(&self, address: usize) -> String {
-        String::from_wide(&self.read_util(address, 0u16, 1000))
+    pub fn read_wstr(&self, address: usize, size: usize) -> String {
+        String::from_wide(&self.read_util(address, 0u16, size))
     }
 
     pub fn write_cstr(&self, address: usize, s: String) -> bool {

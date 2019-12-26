@@ -1,5 +1,5 @@
 
-use crate::ffi::*;
+pub use crate::ffi::*;
 use crate::string::*;
 
 use core::mem::{transmute, size_of, zeroed, size_of_val};
@@ -76,16 +76,12 @@ pub fn get_mapped_file_name(handle: HANDLE, base: usize) -> Option<String> {
     }
 }
 
-// https://docs.microsoft.com/en-us/windows/win32/api/subauth/ns-subauth-unicode_string
-#[repr(C)]
-pub struct UNICODE_STRING {
-    pub Length: USHORT,
-    pub MaximumLength: USHORT,
-    pub Buffer: PWSTR,
+pub trait UnicodeUtil {
+    fn to_string(&self) -> String;
 }
 
-impl UNICODE_STRING {
-    pub fn to_string(&self) -> String {
+impl UnicodeUtil for UNICODE_STRING {
+    fn to_string(&self) -> String {
         unsafe {
             String::from_wide(std::slice::from_raw_parts(self.Buffer, self.Length as usize))
         }
@@ -122,3 +118,6 @@ impl Drop for UnicdoeString {
         }
     }
 }
+
+// https://docs.microsoft.com/en-us/windows/win32/devnotes/ldrregisterdllnotification
+pub type FnLdrRegisterDllNotification = unsafe extern "system" fn(flags: ULONG, callback: LDR_DLL_NOTIFICATION_FUNCTION, context: PVOID, cookie: *mut usize) -> NTSTATUS;

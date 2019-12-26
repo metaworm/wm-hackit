@@ -1,7 +1,6 @@
 
 use crate::*;
 use winapi::shared::windef::HHOOK;
-use winapi::um::libloaderapi::*;
 
 use core::slice::from_raw_parts;
 use core::mem::transmute;

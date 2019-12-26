@@ -4,8 +4,12 @@ use core::ffi::c_void;
 use winapi::shared::minwindef::{
     DWORD, MAX_PATH, BOOL,
 };
-use winapi::shared::ntdef::{HANDLE, PULONG, PVOID, WCHAR};
-pub use winapi::shared::ntdef::NTSTATUS;
+use winapi::shared::ntdef::{
+    HANDLE, PULONG, ULONG, PVOID, WCHAR,
+};
+pub use winapi::shared::ntdef::{
+    NTSTATUS, UNICODE_STRING,
+};
 
 #[repr(C)]
 pub struct IMAGEHLP_MODULE64 {
@@ -156,6 +160,34 @@ pub const IncludeVmRegionCallback: u32 = 10;
 //     VmPreReadCallback,
 //     VmPostReadCallback
 // } MINIDUMP_CALLBACK_TYPE;
+
+#[repr(C)]
+pub union LDR_DLL_NOTIFICATION_DATA {
+    pub Loaded: LDR_DLL_LOADED_NOTIFICATION_DATA,
+    pub Unloaded: LDR_DLL_UNLOADED_NOTIFICATION_DATA,
+}
+
+#[repr(C)]
+pub struct LDR_DLL_LOADED_NOTIFICATION_DATA {
+    pub Flags: ULONG,                    //Reserved.
+    pub FullDllName: *const UNICODE_STRING,   //The full path name of the DLL module.
+    pub BaseDllName: *const UNICODE_STRING,   //The base file name of the DLL module.
+    pub DllBase: PVOID,                  //A pointer to the base address for the DLL in memory.
+    pub SizeOfImage: ULONG,              //The size of the DLL image, in bytes.
+}
+
+#[repr(C)]
+pub struct LDR_DLL_UNLOADED_NOTIFICATION_DATA {
+    pub Flags: ULONG,                    //Reserved.
+    pub FullDllName: *const UNICODE_STRING,   //The full path name of the DLL module.
+    pub BaseDllName: *const UNICODE_STRING,   //The base file name of the DLL module.
+    pub DllBase: PVOID,                  //A pointer to the base address for the DLL in memory.
+    pub SizeOfImage: ULONG,              //The size of the DLL image, in bytes.
+}
+
+pub const LDR_DLL_NOTIFICATION_REASON_LOADED: ULONG = 1;
+pub const LDR_DLL_NOTIFICATION_REASON_UNLOADED: ULONG = 2;
+pub type LDR_DLL_NOTIFICATION_FUNCTION = unsafe extern "system" fn(reason: ULONG, data: &LDR_DLL_NOTIFICATION_DATA, context: PVOID);
 
 extern "system" {
     // https://docs.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryinformationprocess

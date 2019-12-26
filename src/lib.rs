@@ -1,5 +1,6 @@
 #![feature(proc_macro_hygiene)]
 #![feature(asm)]
+#![feature(untagged_unions)]
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
@@ -21,6 +22,7 @@ use winapi::um::memoryapi::*;
 use winapi::um::winuser::*;
 use winapi::um::heapapi::*;
 use winapi::um::handleapi::*;
+use winapi::um::libloaderapi::*;
 use winapi::um::debugapi::OutputDebugStringW;
 
 pub mod util;
@@ -167,6 +169,14 @@ pub fn heap_alloc(size: usize) -> usize {
 #[inline]
 pub fn heap_free(ptr: usize) {
     unsafe { HeapFree(GetProcessHeap(), 0, mem::transmute(ptr)); }
+}
+
+pub fn get_module_base(module: &str) -> HMODULE {
+    unsafe { GetModuleHandleW(module.to_wide().as_ptr()) }
+}
+
+pub fn get_proc_address(module: HMODULE, name: impl AsRef<[u8]>) -> FARPROC {
+    unsafe { GetProcAddress(module, name.as_ref().as_ptr() as *const i8) }
 }
 
 #[cfg(debug_assertions)]
