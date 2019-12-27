@@ -3,6 +3,10 @@ pub use crate::ffi::*;
 use crate::string::*;
 
 use core::mem::{transmute, size_of, zeroed, size_of_val};
+use core::ops::Deref;
+use core::slice::from_raw_parts;
+use std::alloc::{System, Layout, GlobalAlloc};
+
 use winapi::um::winnt::HANDLE;
 use winapi::shared::ntdef::*;
 
@@ -83,13 +87,10 @@ pub trait UnicodeUtil {
 impl UnicodeUtil for UNICODE_STRING {
     fn to_string(&self) -> String {
         unsafe {
-            String::from_wide(std::slice::from_raw_parts(self.Buffer, self.Length as usize))
+            String::from_wide(from_raw_parts(self.Buffer, self.Length as usize))
         }
     }
 }
-
-use std::alloc::{System, Layout, GlobalAlloc};
-use std::ops::Deref;
 
 pub struct UnicdoeString(UNICODE_STRING);
 

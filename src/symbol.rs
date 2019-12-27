@@ -5,8 +5,9 @@ use winapi::um::dbghelp::*;
 use crate::*;
 use crate::ffi::*;
 
-use std::ptr::{null_mut, null};
-use std::mem::{transmute, size_of, size_of_val, zeroed};
+use core::ptr::{null_mut, null};
+use core::mem::{transmute, size_of, size_of_val, zeroed};
+use core::slice::from_raw_parts;
 
 pub fn sym_get_options() -> u32 { unsafe { SymGetOptions() } }
 
@@ -88,7 +89,7 @@ impl SymbolApi for Process {
             let module_name = String::from_wide(&im.ModuleName);
 
             if SymFromAddrW(*self.handle, address as u64, &mut dis, si) > 0 {
-                let s = std::slice::from_raw_parts((*si).Name.as_ptr(), (*si).NameLen as usize);
+                let s = from_raw_parts((*si).Name.as_ptr(), (*si).NameLen as usize);
                 Some(SymbolInfo {
                     module: module_name,
                     symbol: String::from_wide(s),

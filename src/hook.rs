@@ -73,6 +73,7 @@ impl HookContext {
 pub type HookCallback = Box<dyn Fn(&mut HookContext, &mut usize)>;
 
 // TODO: prevent to re-entry
+#[allow(improper_ctypes)]
 unsafe extern "system" fn hook_handler(hook: *mut HookBase, context: *mut HookContext) -> usize {
     let hook = &mut *hook;
     let context = &mut *context;
