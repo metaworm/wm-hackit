@@ -8,7 +8,7 @@ use winapi::shared::ntdef::{
     HANDLE, PULONG, ULONG, PVOID, WCHAR,
 };
 pub use winapi::shared::ntdef::{
-    NTSTATUS, UNICODE_STRING,
+    NTSTATUS, UNICODE_STRING, PCWSTR,
 };
 
 #[repr(C)]
@@ -45,6 +45,7 @@ extern "system" {
     pub fn SymSetOptions(options: u32) -> u32;
     pub fn SymGetOptions() -> u32;
     pub fn SymGetModuleInfoW64(handle: HANDLE, address: u64, im: *mut IMAGEHLP_MODULE64) -> u32;
+    pub fn SymAddSymbolW(handle: HANDLE, base: usize, name: PCWSTR, address: usize, size: u32, flags: u32) -> BOOL;
 }
 
 pub const SYMOPT_CASE_INSENSITIVE: u32 = 0x00000001;
