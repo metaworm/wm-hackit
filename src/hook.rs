@@ -334,7 +334,7 @@ fn alloc_mem_in_4gb(address: usize, size: usize) -> Result<usize, Error> {
 }
 
 #[cfg(target_arch = "x86")]
-fn alloc_mem_in_4gb(address: usize, size: usize) -> Result<usize, Error> {
+fn alloc_mem_in_4gb(_address: usize, size: usize) -> Result<usize, Error> {
     let r = virtual_reserve_commit(0usize, size, PAGE_EXECUTE_READWRITE);
     if r > 0 { Ok(r) } else { Err(Error::VirtualAlloc) }
 }

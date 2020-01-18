@@ -17,7 +17,7 @@ pub trait SymbolApi {
     fn sym_init(&self, search_path: Option<&str>, invade: bool) -> Result<(), Error>;
     fn sym_clean(&self);
     fn sym_load_module(&self, module_path: &str, base: u64, size: u32, flags: u32) -> Result<(), Error>;
-    fn sym_add_symbol(&self, base: usize, name: &str, address: usize) -> bool;
+    // fn sym_add_symbol(&self, base: usize, name: &str, address: usize) -> bool;
 
     fn get_address_by_symbol(&self, symbol: &str) -> Result<usize, Error>;
     fn get_symbol_by_address(&self, address: usize) -> Option<SymbolInfo>;
@@ -51,9 +51,9 @@ impl SymbolApi for Process {
         }
     }
 
-    fn sym_add_symbol(&self, base: usize, name: &str, address: usize) -> bool {
-        unsafe { SymAddSymbolW(*self.handle, base, name.to_wide().as_ptr(), address, 0, 0) > 0 }
-    }
+    // fn sym_add_symbol(&self, base: usize, name: &str, address: usize) -> bool {
+    //     unsafe { SymAddSymbolW(*self.handle, base, name.to_wide().as_ptr(), address, 0, 0) > 0 }
+    // }
 
     fn get_address_by_symbol(&self, symbol: &str) -> Result<usize, Error> {
         unsafe {

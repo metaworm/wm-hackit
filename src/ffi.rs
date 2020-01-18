@@ -45,7 +45,7 @@ extern "system" {
     pub fn SymSetOptions(options: u32) -> u32;
     pub fn SymGetOptions() -> u32;
     pub fn SymGetModuleInfoW64(handle: HANDLE, address: u64, im: *mut IMAGEHLP_MODULE64) -> u32;
-    pub fn SymAddSymbolW(handle: HANDLE, base: usize, name: PCWSTR, address: usize, size: u32, flags: u32) -> BOOL;
+    pub fn SymAddSymbolW(handle: HANDLE, base: usize, name: PCWSTR, address: usize, size: u32, flags: u32) -> u32;
 }
 
 pub const SYMOPT_CASE_INSENSITIVE: u32 = 0x00000001;
