@@ -23,3 +23,6 @@ winapi = {version = '0.3.8', features = [
     'memoryapi', 'dbghelp', 'debugapi', 'ioapiset', 'winerror',
     'shellscalingapi', 'sysinfoapi', 'heapapi', 'fileapi', 'wow64apiset',
 ]}
+
+[build-dependencies]
+cc = '*'
